@@ -1,0 +1,18 @@
+[project]
+name = "nabz-shahr"
+version = "0.1.0"
+description = "Batch and real-time lakehouse platform for ride-hailing trips"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["dbt/target", "dbt/dbt_packages", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["integration: needs the Docker services running"]

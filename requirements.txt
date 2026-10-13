@@ -1,0 +1,29 @@
+# ابزارهای سمت لپ‌تاپ (داخل .venv). سرویس‌ها (Kafka, Trino, Airflow, ...) در Docker اجرا می‌شوند.
+
+# پردازش و کاوش داده
+pyspark>=4.0,<4.1
+duckdb
+pandas
+pyarrow
+
+# ورود داده و ذخیره‌ساز
+requests
+boto3
+
+# Kafka و Avro
+confluent-kafka[avro,schemaregistry]
+fastavro
+
+# Trino و dbt
+trino
+dbt-core
+dbt-trino
+
+# کیفیت داده
+great-expectations
+
+# تست و کیفیت کد
+pytest
+chispa
+ruff
+pre-commit

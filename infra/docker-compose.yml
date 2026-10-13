@@ -1,0 +1,48 @@
+# اجرا از ریشه‌ی پروژه:
+#   docker compose -f infra/docker-compose.yml --env-file .env up -d
+name: nabz-shahr
+
+services:
+  # --- MinIO (NBZ-101)
+  # ایمیج رسمی minio/minio از Docker Hub حذف شده؛ این build جامعه‌ی همان کد است.
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER را در .env بگذار}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD را در .env بگذار}
+    ports:
+      - "9000:9000"                            # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"     # کنسول وب
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # یک‌بار اجرا می‌شود، bucketها را می‌سازد و خارج می‌شود.
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      LANDING_BUCKET: ${LANDING_BUCKET:-landing}
+      LAKE_BUCKET: ${LAKE_BUCKET:-lake}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$LANDING_BUCKET" "local/$$LAKE_BUCKET"
+        mc ls local
+    restart: "no"
+
+volumes:
+  minio-data:

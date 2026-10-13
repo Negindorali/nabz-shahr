@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پروژه نبض شهر</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: یک ستون خواندنی مثل حکم کار داخلی؛ نوار اسپرینت چسبان بالا، تیکت‌ها زیر هم به شکل ردیف‌های بازشونده */
+:root{
+  --bg:#f2f5f7; --surface:#ffffff; --sunken:#e7ecf0;
+  --ink:#13232e; --muted:#566974; --line:#cfd9df;
+  --accent:#0a6a85; --accent-soft:#d9edf3; --on-accent:#ffffff;
+  --warm:#a8650a; --warm-soft:#f6e9d2;
+  --ok:#1f7a4d; --ok-soft:#dcf0e5;
+  --display:"Lalezar","Vazirmatn",Tahoma,sans-serif;
+  --body:"Vazirmatn",Tahoma,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1a21; --surface:#15252e; --sunken:#0a141a;
+    --ink:#e4edf1; --muted:#95a8b2; --line:#2a3f4a;
+    --accent:#5cc3de; --accent-soft:#143a47; --on-accent:#06202a;
+    --warm:#e6aa4f; --warm-soft:#3a2c13;
+    --ok:#62c796; --ok-soft:#143524;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1a21; --surface:#15252e; --sunken:#0a141a;
+  --ink:#e4edf1; --muted:#95a8b2; --line:#2a3f4a;
+  --accent:#5cc3de; --accent-soft:#143a47; --on-accent:#06202a;
+  --warm:#e6aa4f; --warm-soft:#3a2c13;
+  --ok:#62c796; --ok-soft:#143524;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.9}
+.wrap{max-width:900px;margin-inline:auto;padding-inline:16px;padding-block:32px 80px;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.4}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(2.4rem,7vw,4rem);line-height:1.15;color:var(--accent)}
+h2{font-size:1.45rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.84em;background:var(--sunken);padding:.1em .4em;border-radius:4px;direction:ltr;unicode-bidi:isolate;display:inline-block;overflow-wrap:anywhere}
+.ltr{direction:ltr;unicode-bidi:isolate}
+section{display:flex;flex-direction:column;gap:16px}
+.lead{color:var(--muted);max-width:65ch}
+
+/* حکم کار */
+.memo{display:flex;flex-direction:column;gap:20px}
+.memo-head{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:.92rem;border-block:1px solid var(--line);padding-block:12px}
+.memo-head dt{color:var(--muted)}
+.memo-head dd{margin:0;font-weight:500}
+.memo-body{display:flex;flex-direction:column;gap:12px;max-width:65ch}
+.sub{font-size:1.15rem;color:var(--muted)}
+
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.fact{border-inline-start:3px solid var(--accent);padding-inline-start:12px}
+.fact b{display:block;font-size:1.5rem;line-height:1.3;font-variant-numeric:tabular-nums}
+.fact span{font-size:.85rem;color:var(--muted)}
+
+/* معماری */
+.arch{direction:ltr;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.stage h3{font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.stage ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.84rem;font-family:var(--mono)}
+.stage small{direction:rtl;font-family:var(--body);font-size:.8rem;color:var(--muted);line-height:1.6}
+@media (max-width:720px){.arch{grid-template-columns:1fr}}
+
+/* نوار اسپرینت */
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px;display:flex;flex-direction:column;gap:8px}
+.progress{display:flex;align-items:center;gap:12px;font-size:.88rem}
+.track{flex:1;height:8px;background:var(--sunken);border-radius:4px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--accent);transition:width .3s}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.chips a{flex:none;text-decoration:none;font-size:.8rem;padding:2px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--surface);white-space:nowrap}
+.chips a.full{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+button.plain{font:inherit;font-size:.82rem;background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);padding:2px 10px;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* اسپرینت و تیکت */
+.sprint{scroll-margin-top:110px;gap:12px}
+.sprint-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.sprint-head .when{font-size:.85rem;color:var(--muted)}
+.goal{color:var(--muted);max-width:65ch}
+.tasks{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;padding-block:12px;border-bottom:1px solid var(--line);align-items:start}
+.task input{width:20px;height:20px;margin-top:7px;accent-color:var(--accent);cursor:pointer}
+.task summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;list-style:none}
+.task summary::-webkit-details-marker{display:none}
+.task summary::after{content:"+";margin-inline-start:auto;color:var(--muted);font-family:var(--mono)}
+.task details[open] summary::after{content:"–"}
+.tid{font-family:var(--mono);font-size:.78rem;color:var(--muted);direction:ltr}
+.ttl{font-weight:700}
+.tag{font-size:.74rem;padding:0 8px;border-radius:999px;white-space:nowrap}
+.tag.p0{background:var(--warm-soft);color:var(--warm)}
+.tag.p1{background:var(--accent-soft);color:var(--accent)}
+.tag.est{color:var(--muted);border:1px solid var(--line)}
+.task.done .ttl{text-decoration:line-through;color:var(--muted)}
+.body{display:flex;flex-direction:column;gap:14px;padding-top:12px;font-size:.95rem}
+.body h4{margin:0 0 2px;font-size:.78rem;color:var(--accent);font-weight:700}
+.body ul,.body ol{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px}
+.ac{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.learn{display:flex;flex-wrap:wrap;gap:6px;direction:ltr;justify-content:flex-end}
+.learn span{font-family:var(--mono);font-size:.74rem;background:var(--sunken);padding:1px 8px;border-radius:4px}
+
+.rules{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:8px;max-width:65ch}
+.cv{direction:ltr;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 16px 16px 36px;margin:0;display:flex;flex-direction:column;gap:8px;font-size:.92rem;line-height:1.7}
+.cv em{font-style:normal;background:var(--warm-soft);color:var(--warm);padding:0 4px;border-radius:3px}
+.qa{margin:0;padding-inline-start:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:6px 32px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.panel ol,.panel ul,.plainlist{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
+.plainlist{max-width:65ch}
+.kicker{font-size:.78rem;font-weight:700;color:var(--accent)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:start;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.8rem;color:var(--muted);font-weight:700}
+td:first-child{font-weight:500;white-space:nowrap}
+.note{border-inline-start:3px solid var(--warm);padding-inline-start:12px;color:var(--muted);max-width:65ch;font-size:.93rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="memo">
+  <div>
+    <h1>نبض شهر</h1>
+    <p class="sub">پلتفرم داده‌ی لحظه‌ای و دسته‌ای برای یک شرکت تاکسی اینترنتی</p>
+  </div>
+  <dl class="memo-head">
+    <dt>از</dt><dd>مدیر تیم مهندسی داده</dd>
+    <dt>به</dt><dd>تو، مهندس داده‌ی جدید تیم</dd>
+    <dt>موضوع</dt><dd>حکم کار ۱۲ هفته‌ای، تیکت به تیکت</dd>
+    <dt>کد پروژه</dt><dd class="ltr">NBZ</dd>
+  </dl>
+  <div class="memo-body">
+    <p>خوش آمدی. شرکت ما روزی صدها هزار سفر ثبت می‌کند و تیم عملیات هنوز گزارش‌هایش را فردا صبح می‌بیند. از تو می‌خواهم پلتفرمی بسازی که هم تاریخچه‌ی چند صد میلیون سفر را تمیز و قابل پرس‌وجو نگه دارد، هم تقاضای هر منطقه‌ی شهر را با تأخیر کمتر از یک دقیقه نشان بدهد.</p>
+    <p>داده واقعی است: سفرهای Uber و Lyft در نیویورک که سازمان TLC عمومی منتشر می‌کند. ابزارها همان‌هایی هستند که در آگهی‌های شغلی مهندسی داده می‌بینی. همه‌چیز روی لپ‌تاپ خودت با Docker بالا می‌آید و هزینه‌ای ندارد.</p>
+    <p>تیکت‌ها را به ترتیب انجام بده. هر تیکت «معیار پذیرش» دارد؛ تا وقتی آن معیارها برقرار نشده، تیکت بسته نیست. تیک‌هایی که می‌زنی در همین مرورگر ذخیره می‌شود.</p>
+  </div>
+  <div class="facts" id="facts"></div>
+</header>
+
+<section>
+  <h2>مسئله چیست</h2>
+  <p class="lead">یک شرکت تاکسی اینترنتی مثل اسنپ را تصور کن. دو گروه در شرکت دو نوع سؤال دارند و سیستم فعلی هیچ‌کدام را خوب جواب نمی‌دهد.</p>
+  <div class="two">
+    <div class="panel">
+      <span class="kicker">نیاز تاریخی</span>
+      <h3>«درآمد هر منطقه در دو سال گذشته چطور بوده؟»</h3>
+      <p>سؤال مدیر مالی. جوابش یعنی پردازش چند صد میلیون سفر. سرعت جواب در حد چند ثانیه تا چند دقیقه کافی است، ولی عددها باید دقیق و قابل تکرار باشند.</p>
+    </div>
+    <div class="panel">
+      <span class="kicker">نیاز لحظه‌ای</span>
+      <h3>«همین الان کدام منطقه راننده کم دارد؟»</h3>
+      <p>سؤال تیم عملیات. جواب باید زیر یک دقیقه برسد، چون ده دقیقه بعد دیگر به کار نمی‌آید.</p>
+    </div>
+  </div>
+  <p class="lead">تو پلتفرمی می‌سازی که هر دو را از یک منبع داده‌ی مشترک جواب بدهد.</p>
+</section>
+
+<section>
+  <h2>معماری هدف</h2>
+  <p class="lead">داده از چپ به راست حرکت می‌کند. مسیر دسته‌ای و مسیر جریانی هر دو در یک Lakehouse مشترک می‌نشینند.</p>
+  <div class="arch">
+    <div class="stage"><h3>1 · Sources</h3><ul><li>TLC Parquet</li><li>Event replayer</li></ul><small>فایل‌های ماهانه و رویدادهای شبیه‌سازی‌شده‌ی سفر</small></div>
+    <div class="stage"><h3>2 · Ingest</h3><ul><li>Kafka</li><li>Schema Registry</li><li>MinIO landing</li></ul><small>ورود داده بدون تغییر محتوا</small></div>
+    <div class="stage"><h3>3 · Process</h3><ul><li>Spark batch</li><li>Structured Streaming</li><li>dbt</li></ul><small>پاک‌سازی، مدل‌سازی، تجمیع</small></div>
+    <div class="stage"><h3>4 · Lakehouse</h3><ul><li>Iceberg on MinIO</li><li>Bronze</li><li>Silver</li><li>Gold</li></ul><small>سه لایه با تراکنش و time travel</small></div>
+    <div class="stage"><h3>5 · Serve</h3><ul><li>Trino</li><li>Superset</li><li>Grafana</li></ul><small>پرس‌وجو، داشبورد، پایش</small></div>
+  </div>
+  <p class="lead">هماهنگی کل مسیر با <code>Airflow</code>، کنترل کیفیت با تست‌های <code>dbt</code> و <code>Great Expectations</code>، و CI با <code>GitHub Actions</code>.</p>
+  <p class="note">سخت‌افزار: ۱۶ گیگابایت رم و حدود ۴۰ گیگابایت دیسک خالی راحت است. اگر ۸ گیگابایت رم داری، با ۳ ماه داده و یک worker کار کن و سرویس‌های هر اسپرینت را جدا بالا بیاور. معماری و مهارتی که یاد می‌گیری فرقی نمی‌کند.</p>
+</section>
+
+<section>
+  <h2>داده چطور حرکت می‌کند</h2>
+  <div class="two">
+    <div class="panel">
+      <span class="kicker">مسیر دسته‌ای: تاریخچه</span>
+      <ol>
+        <li>فایل‌های ماهانه‌ی سفرها دانلود می‌شوند و در MinIO می‌نشینند، که یک انبار فایل مثل S3 آمازون است.</li>
+        <li>Spark آن‌ها را بدون تغییر در لایه‌ی Bronze می‌نویسد.</li>
+        <li>Spark داده را پاک می‌کند و در Silver می‌گذارد. رکوردهای خراب، مثل کرایه‌ی منفی، با دلیل به جدول قرنطینه می‌روند.</li>
+        <li>dbt از Silver جدول‌های آماده‌ی گزارش می‌سازد (Gold)، مثل درآمد روزانه‌ی هر شرکت.</li>
+        <li>Airflow کل این زنجیره را زمان‌بندی و اجرا می‌کند.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <span class="kicker">مسیر جریانی: لحظه‌ای</span>
+      <ol>
+        <li>یک برنامه سفرهای قدیمی را با سرعت بالا دوباره پخش می‌کند، انگار همین الان اتفاق می‌افتند.</li>
+        <li>هر رویداد (درخواست، شروع، پایان سفر) وارد Kafka می‌شود.</li>
+        <li>Spark Streaming هر ۳۰ ثانیه رویدادها را می‌خواند و تقاضای هر منطقه را در پنجره‌های ۵ دقیقه‌ای می‌شمارد.</li>
+        <li>اگر تقاضای یک منطقه از حد معمول آن ساعت خیلی بالاتر رفت، هشدار صادر می‌شود.</li>
+      </ol>
+    </div>
+  </div>
+  <p class="lead">هر دو مسیر در جدول‌های Iceberg می‌نشینند. Trino روی آن‌ها کوئری می‌زند، Superset داشبورد نشان می‌دهد و Grafana سلامت سیستم را پایش می‌کند.</p>
+</section>
+
+<section>
+  <h2>در پایان چه در دست داری</h2>
+  <ul class="plainlist">
+    <li>یک مخزن GitHub که با یک دستور کل سیستم را بالا می‌آورد.</li>
+    <li>سه داشبورد: عملیات لحظه‌ای، درآمد، کیفیت داده.</li>
+    <li>سند بنچمارک با عددهای قبل و بعد که خودت اندازه گرفته‌ای.</li>
+    <li>یک ویدیوی سه‌دقیقه‌ای از کار کردن سیستم و یک نوشته‌ی فنی منتشرشده.</li>
+  </ul>
+  <h3>چرا برای رزومه قوی است</h3>
+  <ul class="plainlist">
+    <li>ابزارهایش همان‌هایی هستند که در آگهی‌های مهندسی داده می‌بینی.</li>
+    <li>هم مسیر دسته‌ای دارد هم جریانی. بیشتر پروژه‌های آموزشی فقط دسته‌ای‌اند.</li>
+    <li>تست، پایش، بازیابی از خرابی و runbook دارد، که در پروژه‌های شخصی کم دیده می‌شود.</li>
+    <li>هر ادعایش با اندازه‌گیری خودت پشتیبانی می‌شود و در مصاحبه قابل دفاع است.</li>
+  </ul>
+  <p class="note">این پروژه روی یک لپ‌تاپ اجرا می‌شود و خوشه‌ی صدها سروری نیست. معماری و ابزارها همان‌اند، و در اسپرینت آخر باید بنویسی با ده برابر داده چه چیزی را عوض می‌کردی.</p>
+</section>
+
+<div class="bar">
+  <div class="progress">
+    <span id="ptext"></span>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <button class="plain" id="toggleAll" type="button">باز کردن همه</button>
+  </div>
+  <nav class="chips" id="chips" aria-label="اسپرینت‌ها"></nav>
+</div>
+
+<main id="sprints" style="display:flex;flex-direction:column;gap:48px"></main>
+
+<section>
+  <h2>قواعد کار در تیم من</h2>
+  <ol class="rules">
+    <li>هر تیکت یک branch و یک Pull Request دارد، با نام تیکت در عنوان. تاریخچه‌ی git تو بخشی از رزومه است.</li>
+    <li>هیچ عددی را حدسی ننویس. هر ادعا در README باید با یک کوئری یا اسکرین‌شات قابل تکرار باشد.</li>
+    <li>هر job باید idempotent باشد: دو بار اجرا، همان نتیجه‌ی یک بار اجرا.</li>
+    <li>بعد از هر تیکت سه خط در <code>docs/journal.md</code> بنویس: چه ساختم، کجا گیر کردم، چه یاد گرفتم. این فایل منبع جواب‌های مصاحبه‌ات می‌شود.</li>
+    <li>اگر بیش از دو ساعت روی یک خطا ماندی، مسئله را به کوچک‌ترین مثال قابل تکرار برسان و بعد کمک بگیر.</li>
+    <li>ابزار را قبل از فهمیدن مسئله اضافه نکن. اول بدان چرا لازم است، بعد نصبش کن.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>جمله‌های رزومه</h2>
+  <p class="lead">بعد از تمام شدن پروژه این‌ها را با عددهای واقعی خودت پر کن. قسمت‌های رنگی را خودت باید اندازه بگیری.</p>
+  <ul class="cv">
+    <li>Built an end-to-end lakehouse platform (Kafka, Spark, Iceberg, Trino, Airflow, dbt) processing <em>N</em> million NYC ride-hailing trips across bronze/silver/gold layers.</li>
+    <li>Implemented a Spark Structured Streaming pipeline with event-time windows and watermarking, delivering per-zone demand metrics with <em>X</em>-second end-to-end latency and exactly-once writes to Iceberg.</li>
+    <li>Designed idempotent, backfillable Airflow DAGs with write-audit-publish data quality gates; <em>K</em> automated checks block bad data before it reaches gold tables.</li>
+    <li>Cut query time on key analytical workloads by <em>Y</em>% through partition design, file compaction, and skew mitigation, documented with reproducible benchmarks.</li>
+    <li>Added observability (Prometheus, Grafana) for consumer lag and data freshness, plus CI running unit and data tests on every pull request.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>سؤال‌هایی که در جلسه‌ی نهایی از تو می‌پرسم</h2>
+  <p class="lead">همین‌ها در مصاحبه‌های مهندسی داده هم پرسیده می‌شوند. اگر پروژه را خودت ساخته باشی، جواب همه را از تجربه می‌دهی.</p>
+  <ul class="qa">
+    <li>چرا Iceberg و نه Parquet ساده روی S3؟</li>
+    <li>watermark چیست و اگر آن را خیلی کوچک بگذاری چه می‌شود؟</li>
+    <li>exactly-once را در مسیر Kafka تا Iceberg چطور تضمین کردی؟</li>
+    <li>کلید پارتیشن تاپیک را چطور انتخاب کردی و چه بهایی دادی؟</li>
+    <li>اگر داده‌ی سه ماه پیش اصلاح شود، چطور دوباره پردازش می‌کنی؟</li>
+    <li>مشکل small files چیست و چطور حلش کردی؟</li>
+    <li>skew را کجا دیدی و از کجا فهمیدی؟</li>
+    <li>فرق narrow و wide transformation و ربطش به shuffle؟</li>
+    <li>اگر یک broker وسط کار بیفتد چه اتفاقی می‌افتد؟</li>
+    <li>چرا لایه‌ی silver لازم است و نمی‌شود مستقیم gold ساخت؟</li>
+    <li>کدام تصمیمت را اگر دوباره شروع کنی عوض می‌کنی؟</li>
+    <li>این سیستم با ده برابر داده کجا اول می‌شکند؟</li>
+  </ul>
+</section>
+
+<section>
+  <h2>این ایده از کجا آمده</h2>
+  <p class="lead">طراحی این پروژه و ترتیب تیکت‌ها را Claude (هوش مصنوعی شرکت Anthropic) به درخواست تو چیده است. «مدیر تیم»، شرکت تاکسی اینترنتی و اسم «نبض شهر» قالب تمرین‌اند و واقعی نیستند. اجزای پروژه اما الگوهای شناخته‌شده‌ی صنعت‌اند:</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>جزء</th><th>از کجا آمده</th></tr></thead>
+      <tbody>
+        <tr><td>داده‌ی سفرها</td><td>سازمان TLC نیویورک، که آن را عمومی منتشر می‌کند</td></tr>
+        <tr><td>Bronze / Silver / Gold</td><td>الگوی Medallion که Databricks رایج کرد</td></tr>
+        <tr><td>Kafka</td><td>LinkedIn</td></tr>
+        <tr><td>Spark</td><td>دانشگاه برکلی</td></tr>
+        <tr><td>Iceberg و Write-Audit-Publish</td><td>Netflix</td></tr>
+        <tr><td>Airflow و Superset</td><td>Airbnb</td></tr>
+        <tr><td>Trino</td><td>ادامه‌ی Presto که در Facebook ساخته شد</td></tr>
+        <tr><td>مدل ستاره‌ای</td><td>Ralph Kimball</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">داده‌ی TLC در پروژه‌های آموزشی زیاد استفاده می‌شود، پس صرف «پروژه با داده‌ی تاکسی نیویورک» خاص نیست. تمایز این پروژه در مسیر جریانی، تشخیص جهش تقاضا، دروازه‌ی کیفیت، بنچمارک و آزمون آشوب است. در مصاحبه راحت بگو طراحی اولیه را با کمک هوش مصنوعی چیدی؛ ارزش کار به پیاده‌سازی و عددهایی است که خودت اندازه می‌گیری.</p>
+</section>
+
+</div>
+
+<script>
+const SPRINTS = [
+{ n:0, name:"آماده‌سازی و شناخت مسئله", when:"هفته ۱", goal:"قبل از هر ابزاری باید داده و مسئله را بشناسی. خروجی این اسپرینت یک مخزن مرتب و دو سند است.", tasks:[
+ { id:"NBZ-001", t:"راه‌اندازی محیط توسعه و مخزن", est:4, p:0,
+   why:"محیط شلوغ و بدون ساختار، هفته‌ی ششم پروژه را می‌کشد.",
+   steps:["Linux یا WSL2، Docker، Docker Compose، Python 3.12 و git را نصب کن.","یک مخزن عمومی در GitHub بساز با پوشه‌های <code>infra/</code>، <code>jobs/</code>، <code>dags/</code>، <code>dbt/</code>، <code>tests/</code>، <code>docs/</code>.","<code>pre-commit</code> را با <code>ruff</code> فعال کن و یک <code>Makefile</code> خالی بگذار."],
+   ac:["<code>docker run hello-world</code> بدون sudo اجرا می‌شود.","اولین commit با ساختار پوشه‌ها روی GitHub است.","commit با کد بدفرمت توسط pre-commit رد می‌شود."],
+   learn:["Docker basics","git branching","virtualenv"] },
+ { id:"NBZ-002", t:"گرم‌کردن با SQL تحلیلی روی یک ماه داده", est:6, p:0,
+   why:"هشتاد درصد کار مهندس داده SQL است. اگر window function را روان ننویسی، بقیه‌ی پروژه کند پیش می‌رود.",
+   steps:["فایل <code>fhvhv_tripdata_2024-01.parquet</code> را از صفحه‌ی TLC Trip Record Data دانلود کن.","با DuckDB مستقیم روی فایل Parquet کوئری بزن.","ده سؤال تجاری را جواب بده: شلوغ‌ترین ساعت هر منطقه، میانگین متحرک ۷ روزه‌ی درآمد، رتبه‌ی مناطق با <code>RANK</code>، فاصله‌ی سفرهای متوالی با <code>LAG</code> و مانند این‌ها."],
+   ac:["ده فایل کوئری در <code>sql/warmup/</code> با توضیح یک‌خطی هر کدام.","حداقل چهار کوئری window function و دو کوئری CTE دارند."],
+   learn:["window functions","CTE","DuckDB","Parquet columnar"] },
+ { id:"NBZ-003", t:"پروفایل داده و نوشتن Data Contract", est:5, p:0,
+   why:"هر خط کدی که بعداً می‌نویسی بر فرضی درباره‌ی داده بنا می‌شود. فرض‌ها را الان مکتوب کن.",
+   steps:["برای هر ستون نوع، درصد null، کمینه و بیشینه را دربیاور.","ناهنجاری‌ها را پیدا کن: کرایه‌ی منفی، سفر با مدت صفر، زمان پیاده‌شدن قبل از سوارشدن، شناسه‌ی منطقه‌ی نامعتبر.","جدول <code>taxi_zone_lookup.csv</code> را هم بررسی کن و ربطش به <code>PULocationID</code> و <code>DOLocationID</code> را بنویس."],
+   ac:["<code>docs/data_contract.md</code> شامل schema، معنی هر ستون، و قواعد اعتبار هر ستون.","حداقل شش نوع ناهنجاری با تعداد رکورد هر کدام ثبت شده."],
+   learn:["data profiling","data contract","schema"] },
+ { id:"NBZ-004", t:"سند طراحی یک‌صفحه‌ای", est:3, p:1,
+   why:"در شرکت واقعی قبل از ساختن، طرح را می‌نویسند و نقد می‌شود. این سند اولین چیزی است که مصاحبه‌گر در مخزنت باز می‌کند.",
+   steps:["مسئله، کاربران، و سه SLA را تعریف کن: تازگی داده‌ی لحظه‌ای، زمان آماده‌شدن گزارش روزانه، دقت.","برای هر ابزار معماری یک جمله بنویس که چرا این و نه جایگزینش.","ریسک‌ها و چیزهایی که عمداً خارج از محدوده گذاشتی را فهرست کن."],
+   ac:["<code>docs/design.md</code> حداکثر دو صفحه با نمودار معماری.","هر SLA عدد دارد و قابل اندازه‌گیری است."],
+   learn:["design doc","SLA / SLO","batch vs streaming"] },
+]},
+{ n:1, name:"زیرساخت محلی", when:"هفته ۲", goal:"یک دستور، کل پلتفرم بالا بیاید. در پایان این اسپرینت از Spark جدول می‌سازی و از Trino می‌خوانی.", tasks:[
+ { id:"NBZ-101", t:"ذخیره‌ساز شیء با MinIO", est:3, p:0,
+   why:"MinIO همان API سرویس S3 را دارد. هرچه این‌جا یاد بگیری روی ابر هم کار می‌کند.",
+   steps:["MinIO را در <code>infra/docker-compose.yml</code> تعریف کن با volume ماندگار.","دو bucket بساز: <code>landing</code> و <code>lake</code>.","با کلاینت <code>mc</code> فایل بالا و پایین کن."],
+   ac:["بعد از <code>docker compose down</code> و <code>up</code> داده‌ها باقی می‌مانند.","رمزها در <code>.env</code> هستند و <code>.env</code> در git نیست."],
+   learn:["object storage","S3 API","docker volumes"] },
+ { id:"NBZ-102", t:"خوشه‌ی Spark با یک master و دو worker", est:5, p:0,
+   why:"حالت local خیلی از رفتارهای توزیع‌شده را پنهان می‌کند. با دو worker واقعاً shuffle و شبکه را می‌بینی.",
+   steps:["Spark 4.0 را در حالت standalone روی compose بالا بیاور.","حافظه و هسته‌ی هر worker را محدود کن.","یک job شمارش کلمه یا شمارش سفر را با <code>spark-submit</code> اجرا کن و در Spark UI دنبالش کن."],
+   ac:["Spark UI هر دو worker را زنده نشان می‌دهد.","job از MinIO می‌خواند و در MinIO می‌نویسد (مسیر <code>s3a://</code>).","در journal نوشته‌ای job چند stage و چند task داشت و چرا."],
+   learn:["driver / executor","spark-submit","s3a","Spark UI"] },
+ { id:"NBZ-103", t:"کاتالوگ Iceberg و موتور پرس‌وجوی Trino", est:6, p:0,
+   why:"Lakehouse یعنی جدول تراکنشی روی فایل ارزان. کاتالوگ قطعه‌ای است که Spark و Trino را به یک جدول واحد می‌رساند.",
+   steps:["یک Iceberg REST catalog بالا بیاور که warehouse آن روی bucket <code>lake</code> باشد.","Spark را با runtime آیسبرگ پیکربندی کن.","Trino را با کانکتور Iceberg به همان کاتالوگ وصل کن."],
+   ac:["جدولی که با Spark ساخته و پر شده، از Trino با <code>SELECT</code> خوانده می‌شود.","پوشه‌ی <code>metadata/</code> جدول را در MinIO باز کرده‌ای و در journal توضیح داده‌ای snapshot و manifest چیست."],
+   learn:["Iceberg table format","catalog","snapshot","Trino connectors"] },
+ { id:"NBZ-104", t:"Makefile، healthcheck و مستند راه‌اندازی", est:3, p:1,
+   why:"کسی که مخزنت را clone می‌کند باید در پنج دقیقه سیستم را ببیند، وگرنه می‌بندد و می‌رود.",
+   steps:["هدف‌های <code>make up</code>، <code>make down</code>، <code>make logs</code>، <code>make clean</code> را بنویس.","برای هر سرویس healthcheck و <code>depends_on</code> با شرط سلامت بگذار.","سرویس‌ها را با compose profile گروه‌بندی کن تا بشود فقط بخشی را بالا آورد."],
+   ac:["روی یک clone تازه، <code>make up</code> بدون دخالت دستی همه‌چیز را سالم بالا می‌آورد.","جدول پورت‌ها و آدرس UIها در README هست."],
+   learn:["compose profiles","healthcheck","Makefile"] },
+]},
+{ n:2, name:"ورود دسته‌ای و لایه‌ی Bronze", when:"هفته ۳ و ۴", goal:"بیست‌وچهار ماه سفر، بدون تغییر محتوا، در جدول Iceberg. این‌جا Spark را واقعاً یاد می‌گیری.", tasks:[
+ { id:"NBZ-201", t:"دانلودگر idempotent به landing", est:5, p:0,
+   why:"منبع بیرونی قطع می‌شود، فایل ناقص می‌آید، job دو بار اجرا می‌شود. کد ورود باید همه را تحمل کند.",
+   steps:["اسکریپتی بنویس که ماه را پارامتر بگیرد و فایل آن ماه را در <code>landing/fhvhv/year=YYYY/month=MM/</code> بگذارد.","retry با backoff و بررسی اندازه یا checksum اضافه کن.","یک فایل manifest نگه دار که چه فایلی کی و با چه اندازه‌ای آمده."],
+   ac:["اجرای دوباره برای ماهی که قبلاً آمده چیزی دانلود نمی‌کند.","قطع کردن دانلود وسط کار فایل ناقص در landing باقی نمی‌گذارد.","۲۴ ماه داده در landing است و تعداد کل ردیف‌ها در journal ثبت شده."],
+   learn:["idempotency","retry / backoff","landing zone"] },
+ { id:"NBZ-202", t:"job لایه‌ی Bronze با PySpark", est:8, p:0,
+   why:"Bronze آرشیو امانت‌دار منبع است. اگر روزی منطق پاک‌سازی عوض شد، از همین‌جا دوباره می‌سازی.",
+   steps:["schema را صریح تعریف کن و به inference تکیه نکن.","ستون‌های <code>_ingested_at</code> و <code>_source_file</code> اضافه کن.","در جدول <code>bronze.trips</code> بنویس با پارتیشن <code>months(pickup_datetime)</code>.","اگر ستونی در ماه‌های مختلف نوع متفاوت داشت، آن را مدیریت و مستند کن."],
+   ac:["تعداد ردیف bronze با مجموع ردیف فایل‌های landing برابر است و یک تست این را بررسی می‌کند.","اجرای دوباره‌ی job برای یک ماه، ردیف تکراری نمی‌سازد.","job پارامتر ماه می‌گیرد و هیچ مسیر یا تاریخی در کد hardcode نیست."],
+   learn:["DataFrame API","explicit schema","hidden partitioning","overwrite partitions"] },
+ { id:"NBZ-203", t:"کالبدشکافی یک job در Spark UI", est:6, p:0,
+   why:"فرق کسی که Spark بلد است با کسی که فقط کدش را نوشته، خواندن plan و UI است.",
+   steps:["یک تجمیع با <code>groupBy</code> و یک join با جدول مناطق بنویس.","<code>explain(\"formatted\")</code> را بخوان و مرز stageها را پیدا کن.","<code>spark.sql.shuffle.partitions</code> را با سه مقدار امتحان و زمان را مقایسه کن.","یک بار با broadcast join و یک بار بدون آن اجرا کن."],
+   ac:["<code>docs/spark_anatomy.md</code> با اسکرین‌شات DAG و توضیح این‌که هر shuffle از کدام خط کد آمده.","جدول مقایسه‌ی زمان اجرا برای حداقل چهار پیکربندی."],
+   learn:["lazy evaluation","shuffle","physical plan","AQE","broadcast join"] },
+ { id:"NBZ-204", t:"تست واحد برای تبدیل‌های Spark", est:4, p:1,
+   why:"pipeline بدون تست را هیچ تیمی به production نمی‌برد.",
+   steps:["منطق تبدیل را از I/O جدا کن تا تابع‌ها DataFrame بگیرند و DataFrame بدهند.","با <code>pytest</code> و یک SparkSession محلی تست بنویس.","برای مقایسه‌ی DataFrameها از <code>chispa</code> استفاده کن."],
+   ac:["<code>make test</code> زیر یک دقیقه سبز می‌شود.","هر تابع تبدیل حداقل یک تست حالت عادی و یک تست حالت مرزی دارد."],
+   learn:["pytest fixtures","testable transforms","chispa"] },
+]},
+{ n:3, name:"مدل‌سازی: Silver و Gold", when:"هفته ۵ و ۶", goal:"داده‌ی خام به جدول‌هایی تبدیل می‌شود که تحلیل‌گر بدون پرسیدن از تو بتواند استفاده کند.", tasks:[
+ { id:"NBZ-301", t:"لایه‌ی Silver: پاک‌سازی، حذف تکرار، قرنطینه", est:8, p:0,
+   why:"دور ریختن بی‌صدای رکورد بد بدترین کار ممکن است. رکورد بد باید با دلیلش جایی ثبت شود.",
+   steps:["قواعد Data Contract تیکت NBZ-003 را به کد تبدیل کن.","رکوردهای نامعتبر را با ستون <code>reject_reason</code> به <code>silver.trips_quarantine</code> بفرست.","تکراری‌ها را با یک کلید طبیعی تعریف و حذف کن.","ستون‌های مشتق بساز: مدت انتظار، سرعت میانگین، کرایه‌ی کل."],
+   ac:["ردیف‌های silver به‌علاوه‌ی قرنطینه به‌علاوه‌ی تکراری‌های حذف‌شده برابر ردیف‌های bronze است.","گزارش درصد رد به تفکیک دلیل برای هر ماه موجود است.","هیچ مقدار null در ستون‌های کلیدی silver نیست."],
+   learn:["deduplication","quarantine pattern","data reconciliation"] },
+ { id:"NBZ-302", t:"مدل ابعادی: fact و dimensionها", est:6, p:0,
+   why:"مدل‌سازی ابعادی زبان مشترک تیم‌های داده است و در هر مصاحبه‌ای سؤال دارد.",
+   steps:["grain جدول <code>fact_trips</code> را در یک جمله تعریف کن.","<code>dim_zone</code>، <code>dim_date</code> و <code>dim_company</code> را بساز (ستون <code>hvfhs_license_num</code> شرکت را مشخص می‌کند).","نمودار ERD را رسم کن."],
+   ac:["<code>docs/data_model.md</code> با ERD، grain و توضیح هر measure.","هر کلید خارجی fact در dimension مربوط وجود دارد و تست این را بررسی می‌کند."],
+   learn:["star schema","grain","surrogate key","Kimball"] },
+ { id:"NBZ-303", t:"جدول‌های Gold با dbt روی Trino", est:8, p:0,
+   why:"dbt استاندارد لایه‌ی تبدیل SQL است: نسخه‌بندی، تست، مستندات و lineage را یک‌جا می‌دهد.",
+   steps:["پروژه‌ی dbt با آداپتر <code>dbt-trino</code> بساز.","سه mart بنویس: تقاضای ساعتی هر منطقه، درآمد روزانه به تفکیک شرکت، و سهم راننده از کرایه.","برای هر مدل تست <code>not_null</code>، <code>unique</code> و <code>relationships</code> بگذار.","<code>dbt docs generate</code> را اجرا و گراف lineage را ذخیره کن."],
+   ac:["<code>dbt build</code> بدون خطا تمام می‌شود.","حداقل پانزده تست dbt وجود دارد و همه سبزند.","هر مدل و ستون توضیح دارد."],
+   learn:["dbt models","ref / source","dbt tests","lineage"] },
+ { id:"NBZ-304", t:"پردازش افزایشی با MERGE و time travel", est:6, p:0,
+   why:"هر شب کل تاریخچه را دوباره ساختن جواب نمی‌دهد. و داده‌ی دیررسیده همیشه هست.",
+   steps:["job سیلور را طوری بازنویسی کن که فقط ماه ورودی را با <code>MERGE INTO</code> به‌روز کند.","یک مدل dbt را incremental کن.","عمداً یک ماه را خراب بنویس و با <code>rollback_to_snapshot</code> برگردان."],
+   ac:["بازپردازش یک ماه، فقط فایل‌های پارتیشن همان ماه را عوض می‌کند (از جدول <code>snapshots</code> نشان بده).","سناریوی خرابی و بازگشت با دستورها در <code>docs/runbook.md</code> ثبت شده."],
+   learn:["MERGE INTO","incremental models","time travel","ACID on data lake"] },
+]},
+{ n:4, name:"مسیر جریانی", when:"هفته ۷ و ۸", goal:"سنگین‌ترین و باارزش‌ترین اسپرینت. در پایانش تقاضای هر منطقه با تأخیر زیر یک دقیقه در جدول است.", tasks:[
+ { id:"NBZ-401", t:"Kafka در حالت KRaft و طراحی تاپیک", est:5, p:0,
+   why:"تعداد پارتیشن و کلید پیام را بعداً به‌سختی می‌شود عوض کرد. باید با دلیل انتخاب شوند.",
+   steps:["Kafka بدون ZooKeeper و یک Schema Registry به compose اضافه کن.","تاپیک <code>trips.events</code> را با ۶ پارتیشن بساز و کلید را <code>PULocationID</code> بگذار.","retention و <code>cleanup.policy</code> را آگاهانه تنظیم کن.","با ابزار خط فرمان پیام بفرست و با دو consumer در یک گروه بخوان."],
+   ac:["در journal توضیح داده‌ای این کلید چه تضمین ترتیبی می‌دهد و چه خطر skew دارد.","rebalance شدن گروه را با اضافه و حذف consumer دیده و ثبت کرده‌ای."],
+   learn:["partitions / offsets","consumer groups","KRaft","retention"] },
+ { id:"NBZ-402", t:"بازپخش‌کننده‌ی رویداد سفر", est:8, p:0,
+   why:"داده‌ی زنده‌ی واقعی نداریم، پس تاریخچه را با سرعت بالا دوباره پخش می‌کنیم. آشفتگی دنیای واقعی را هم خودمان تزریق می‌کنیم.",
+   steps:["برنامه‌ای بنویس که سفرهای یک روز را بخواند و برای هر سفر سه رویداد بسازد: <code>requested</code>، <code>started</code>، <code>completed</code>.","رویدادها را به ترتیب زمان رخداد و با ضریب سرعت قابل تنظیم بفرست.","schema را با Avro در Schema Registry ثبت کن.","با احتمال قابل تنظیم رویداد تکراری، دیررسیده و خراب تولید کن."],
+   ac:["با ضریب ۶۰، یک ساعت داده در یک دقیقه پخش می‌شود.","نرخ پیام در ثانیه در لاگ چاپ می‌شود.","تغییر ناسازگار schema توسط Registry رد می‌شود و این را نشان داده‌ای."],
+   learn:["event time","Avro","schema evolution","producer acks"] },
+ { id:"NBZ-403", t:"Structured Streaming از Kafka به Bronze", est:8, p:0,
+   why:"هسته‌ی مسیر جریانی. این‌جا exactly-once از یک اصطلاح به چیزی که خودت آزموده‌ای تبدیل می‌شود.",
+   steps:["job جریانی بنویس که تاپیک را بخواند، Avro را باز کند و در <code>bronze.trip_events</code> بنویسد.","checkpoint را روی MinIO بگذار و trigger را ۳۰ ثانیه تنظیم کن.","وسط کار job را kill کن و دوباره بالا بیاور."],
+   ac:["بعد از سه بار kill و راه‌اندازی، تعداد رویدادهای یکتا در جدول با تعداد تولیدشده برابر است.","در journal نوشته‌ای checkpoint چه چیزی نگه می‌دارد و چرا پاک کردنش خطرناک است."],
+   learn:["micro-batch","checkpointing","exactly-once","offset management"] },
+ { id:"NBZ-404", t:"تجمیع پنجره‌ای با watermark", est:8, p:0,
+   why:"محصول اصلی تیم عملیات همین است: الان در هر منطقه چند درخواست داریم.",
+   steps:["پنجره‌ی ۵ دقیقه‌ای روی زمان رخداد، به تفکیک منطقه، با watermark ده دقیقه بساز.","رویدادهای تکراری را با <code>dropDuplicatesWithinWatermark</code> حذف کن.","با <code>dim_zone</code> یک stream-static join بزن.","نتیجه را در <code>gold_rt.zone_demand_5m</code> بنویس."],
+   ac:["رویداد دیررسیده‌ی داخل watermark در پنجره‌ی درستش شمرده می‌شود و رویداد خارج از آن حذف می‌شود؛ هر دو را با تست نشان بده.","عدد یک پنجره‌ی نمونه با همان محاسبه روی داده‌ی batch برابر است.","تأخیر انتها به انتها اندازه‌گیری و ثبت شده."],
+   learn:["tumbling window","watermark","late data","state store","stream-static join"] },
+ { id:"NBZ-405", t:"تشخیص جهش تقاضا با ترکیب batch و stream", est:6, p:1,
+   why:"این قابلیت است که پروژه را از یک تمرین به یک محصول تبدیل می‌کند و در مصاحبه داستان خوبی دارد.",
+   steps:["از gold دسته‌ای، میانگین و انحراف معیار تقاضای هر منطقه در هر ساعت هفته را دربیاور.","در job جریانی، تقاضای فعلی را با این خط پایه مقایسه کن.","وقتی تقاضا از آستانه گذشت، پیام به تاپیک <code>alerts.surge</code> بفرست."],
+   ac:["با بازپخش یک روز پرترافیک مثل شب سال نو، هشدار برای مناطق مورد انتظار صادر می‌شود.","آستانه پارامتر است و دلیل مقدار انتخابی مستند شده."],
+   learn:["baseline / anomaly","lambda vs kappa","foreachBatch"] },
+ { id:"NBZ-406", t:"صف پیام‌های مرده", est:3, p:1,
+   why:"یک پیام خراب نباید کل pipeline را متوقف کند.",
+   steps:["پیام‌هایی که parse نمی‌شوند را با متن خطا به تاپیک <code>trips.events.dlq</code> بفرست.","شمارنده‌ی پیام‌های DLQ را لاگ کن."],
+   ac:["با تزریق پیام خراب، job اصلی بدون توقف ادامه می‌دهد.","هر پیام DLQ علت رد و offset اصلی را دارد."],
+   learn:["dead letter queue","poison pill"] },
+]},
+{ n:5, name:"هماهنگ‌سازی و کیفیت داده", when:"هفته ۹", goal:"دیگر هیچ jobی را دستی اجرا نمی‌کنی. داده‌ی بد هم به gold نمی‌رسد.", tasks:[
+ { id:"NBZ-501", t:"DAG ماهانه در Airflow", est:8, p:0,
+   why:"هماهنگ‌ساز، مغز عملیاتی پلتفرم است. backfill درست نشانه‌ی این است که jobهایت واقعاً idempotent هستند.",
+   steps:["Airflow را با LocalExecutor به compose اضافه کن.","DAG بساز: دانلود، bronze، silver، <code>dbt build</code>، بررسی کیفیت.","همه‌ی taskها تاریخ را از <code>data_interval_start</code> بگیرند.","retry، timeout و callback شکست تنظیم کن."],
+   ac:["<code>airflow dags backfill</code> برای شش ماه بدون دخالت تمام می‌شود.","اجرای دوباره‌ی یک ماه موفق، داده را تغییر نمی‌دهد.","شکست عمدی یک task، taskهای بعدی را متوقف و هشدار ثبت می‌کند."],
+   learn:["DAG / operators","data interval","backfill","retries"] },
+ { id:"NBZ-502", t:"دروازه‌ی کیفیت با الگوی Write-Audit-Publish", est:6, p:0,
+   why:"تست بعد از انتشار دیر است. داده اول باید جایی نوشته شود که مصرف‌کننده نمی‌بیند، بررسی شود، بعد منتشر شود.",
+   steps:["با Great Expectations مجموعه‌ای از انتظارها برای silver بنویس: بازه‌ی مقادیر، تعداد ردیف نسبت به ماه قبل، یکتایی.","داده را روی یک branch آیسبرگ بنویس، بررسی کن، و فقط در صورت موفقیت به <code>main</code> ببر.","نتیجه‌ی هر اجرا را در جدول <code>ops.dq_results</code> ذخیره کن."],
+   ac:["با تزریق یک ماه خراب، انتشار انجام نمی‌شود و جدول اصلی دست‌نخورده می‌ماند.","حداقل دوازده بررسی کیفیت تعریف شده و تاریخچه‌شان قابل پرس‌وجو است."],
+   learn:["write-audit-publish","Iceberg branches","Great Expectations"] },
+ { id:"NBZ-503", t:"DAG نگهداری جدول‌ها", est:4, p:1,
+   why:"مسیر جریانی هر ۳۰ ثانیه فایل کوچک می‌سازد. بدون نگهداری، کوئری‌ها هفته به هفته کندتر می‌شوند.",
+   steps:["DAG روزانه برای <code>rewrite_data_files</code>، <code>expire_snapshots</code> و <code>remove_orphan_files</code> بنویس.","قبل و بعد، تعداد و میانگین اندازه‌ی فایل‌ها را از جدول متادیتای <code>files</code> بخوان."],
+   ac:["جدول مقایسه‌ی قبل و بعد: تعداد فایل، اندازه‌ی میانگین، زمان یک کوئری نمونه.","دوره‌ی نگهداری snapshot با دلیل انتخاب شده."],
+   learn:["small files problem","compaction","snapshot expiration"] },
+]},
+{ n:6, name:"ارائه و پایش", when:"هفته ۱۰", goal:"کار تو وقتی دیده می‌شود که کسی داشبورد را باز کند. و وقتی خراب شد، تو باید اولین کسی باشی که می‌فهمد.", tasks:[
+ { id:"NBZ-601", t:"داشبوردهای Superset", est:6, p:0,
+   why:"اسکرین‌شات داشبورد اولین چیزی است که در README و لینکدین دیده می‌شود.",
+   steps:["Superset را به Trino وصل کن.","سه داشبورد بساز: عملیات لحظه‌ای (تقاضای هر منطقه و هشدارها)، درآمد (روند و مقایسه‌ی شرکت‌ها)، کیفیت داده (نرخ رد و نتیجه‌ی بررسی‌ها).","داشبوردها را export کن و در مخزن بگذار."],
+   ac:["داشبورد لحظه‌ای هنگام بازپخش، بدون refresh دستی به‌روز می‌شود.","هر نمودار زیر ۵ ثانیه بار می‌شود.","فایل export در <code>dashboards/</code> هست و با یک دستور import می‌شود."],
+   learn:["Superset datasets","BI on lakehouse","query federation"] },
+ { id:"NBZ-602", t:"پایش با Prometheus و Grafana", est:6, p:0,
+   why:"مهندس ارشد کسی است که می‌داند سیستمش الان سالم است یا نه، بدون این‌که منتظر شکایت بماند.",
+   steps:["Prometheus، Grafana و یک Kafka exporter اضافه کن.","متریک‌های Spark را فعال کن.","داشبورد Grafana بساز: consumer lag، ردیف پردازش‌شده در ثانیه، مدت هر micro-batch، تازگی آخرین رکورد gold.","یک قاعده‌ی هشدار برای lag بالا تعریف کن."],
+   ac:["با متوقف کردن job جریانی، lag بالا می‌رود و هشدار ظرف دو دقیقه فعال می‌شود.","داشبورد به صورت JSON در مخزن است."],
+   learn:["consumer lag","metrics / exporters","alerting","data freshness"] },
+ { id:"NBZ-603", t:"Runbook حادثه", est:3, p:1,
+   why:"نوشتن runbook نشان می‌دهد به شکست فکر کرده‌ای. این دقیقاً فرق پروژه‌ی آموزشی با سیستم واقعی است.",
+   steps:["سه سناریو را مستند کن: job جریانی عقب افتاده، یک ماه داده‌ی خراب منتشر شده، دیسک MinIO پر شده.","برای هر کدام: نشانه، تشخیص، اقدام، پیشگیری."],
+   ac:["هر سناریو را واقعاً یک بار ساخته و با همان دستورهای runbook رفع کرده‌ای."],
+   learn:["incident response","runbook","postmortem"] },
+]},
+{ n:7, name:"کارایی و تاب‌آوری", when:"هفته ۱۱", goal:"عددهای رزومه از این اسپرینت می‌آیند. هر بهبودی باید قبل و بعد داشته باشد.", tasks:[
+ { id:"NBZ-701", t:"بنچمارک و بهینه‌سازی سه بار کاری سنگین", est:8, p:0,
+   why:"جمله‌ی «زمان کوئری را فلان درصد کم کردم» فقط وقتی ارزش دارد که بتوانی روشش را توضیح بدهی.",
+   steps:["سه بار کاری انتخاب کن: job سیلور یک ماه، یک کوئری gold روی دو سال، یک join بزرگ.","خط پایه را سه بار اندازه بگیر و میانه را ثبت کن.","هر بار فقط یک تغییر بده: sort order جدول، اندازه‌ی فایل هدف، تنظیمات AQE، حافظه‌ی executor، partition pruning.","اثر هر تغییر را جدا ثبت کن."],
+   ac:["<code>docs/benchmarks.md</code> با جدول قبل و بعد، مشخصات سخت‌افزار، و دستور تکرار آزمایش.","برای هر بهبود یک جمله توضیح سازوکار، با ارجاع به plan یا Spark UI."],
+   learn:["partition pruning","file sizing","sort order","executor memory"] },
+ { id:"NBZ-702", t:"پیدا کردن و رفع skew", est:5, p:0,
+   why:"فرودگاه‌ها و منهتن چند برابر بقیه‌ی مناطق سفر دارند. skew شایع‌ترین دلیل کندی job در دنیای واقعی است.",
+   steps:["توزیع سفر به تفکیک منطقه را رسم کن.","یک join یا تجمیع روی کلید منطقه بزن و در Spark UI اختلاف مدت taskها را پیدا کن.","یک بار با AQE skew join و یک بار با salting حلش کن."],
+   ac:["اسکرین‌شات قبل و بعد از توزیع مدت taskها.","توضیح داده‌ای کدام راه‌حل کجا مناسب‌تر است."],
+   learn:["data skew","salting","AQE skew join"] },
+ { id:"NBZ-703", t:"آزمون آشوب", est:4, p:1,
+   why:"تا چیزی را عمداً نشکنی، نمی‌دانی سیستم توزیع‌شده‌ات واقعاً چقدر تاب دارد.",
+   steps:["Kafka را سه‌broker کن با replication factor سه.","وسط بازپخش یک broker را متوقف کن.","وسط یک job دسته‌ای یک Spark worker را kill کن."],
+   ac:["در هر دو آزمون داده‌ای گم یا تکرار نمی‌شود و این با شمارش نشان داده شده.","رفتار مشاهده‌شده، مثل انتخاب leader جدید و اجرای دوباره‌ی task، در journal ثبت است."],
+   learn:["replication / ISR","leader election","task retry","fault tolerance"] },
+]},
+{ n:8, name:"تحویل و معرفی", when:"هفته ۱۲", goal:"پروژه‌ای که خوب معرفی نشود، برای رزومه وجود ندارد.", tasks:[
+ { id:"NBZ-801", t:"CI با GitHub Actions", est:4, p:0,
+   why:"نشان سبز CI بالای README در دو ثانیه می‌گوید این آدم مثل یک مهندس کار می‌کند.",
+   steps:["workflow بنویس که روی هر PR، lint و تست‌های واحد و <code>dbt parse</code> را اجرا کند.","وابستگی‌ها را cache کن."],
+   ac:["PR با تست شکسته قابل merge نیست.","نشان وضعیت CI در README هست."],
+   learn:["CI pipelines","GitHub Actions"] },
+ { id:"NBZ-802", t:"README، نمودار معماری و ویدیوی نمایش", est:6, p:0,
+   why:"مصاحبه‌گر حدود یک دقیقه برای مخزنت وقت می‌گذارد. در آن یک دقیقه باید بفهمد چه ساختی و چقدر جدی است.",
+   steps:["README را به انگلیسی بنویس: مسئله، نمودار معماری، راه‌اندازی سریع، تصمیم‌های طراحی، نتایج بنچمارک، محدودیت‌ها.","یک ویدیوی سه‌دقیقه‌ای ضبط کن: بالا آمدن سیستم، بازپخش، به‌روز شدن داشبورد، صدور هشدار.","بخش «اگر ده برابر داده داشتیم چه می‌کردم» را اضافه کن."],
+   ac:["یک نفر دیگر با دنبال کردن README سیستم را بدون سؤال از تو بالا می‌آورد.","لینک ویدیو و اسکرین‌شات داشبوردها در README هست."],
+   learn:["technical writing","architecture diagrams"] },
+ { id:"NBZ-803", t:"نوشته‌ی فنی درباره‌ی سخت‌ترین مسئله", est:4, p:1,
+   why:"یک نوشته‌ی خوب درباره‌ی یک باگ واقعی بیشتر از ده گواهی دوره اعتبار می‌آورد.",
+   steps:["از journal سخت‌ترین مشکلی که حل کردی را انتخاب کن.","نوشته‌ای ۸۰۰ تا ۱۲۰۰ کلمه‌ای بنویس: نشانه، فرضیه‌های غلط، علت اصلی، راه‌حل.","در لینکدین یا ویرگول یا Medium منتشر کن و به مخزن لینک بده."],
+   ac:["نوشته منتشر شده و لینکش در README و رزومه هست."],
+   learn:["storytelling","debugging narrative"] },
+ { id:"NBZ-804", t:"جلسه‌ی دفاع نهایی", est:3, p:0,
+   why:"این تمرین مصاحبه است. باید بتوانی سی دقیقه بدون نگاه به کد از طراحی‌ات دفاع کنی.",
+   steps:["به دوازده سؤال پایین همین صفحه کتبی جواب بده.","برای یک دوست یا جلوی دوربین، پانزده دقیقه سیستم را روی تخته توضیح بده.","جمله‌های رزومه را با عددهای واقعی پر کن."],
+   ac:["<code>docs/interview_notes.md</code> با جواب هر دوازده سؤال.","رزومه و لینکدین به‌روز شده و لینک مخزن دارد."],
+   learn:["system design interview","whiteboarding"] },
+]},
+];
+
+const KEY = "nbz-done-v1";
+const fa = n => Number(n).toLocaleString("fa-IR");
+let done = {};
+try { done = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { done = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {} };
+
+const allTasks = SPRINTS.flatMap(s => s.tasks);
+const totalHours = allTasks.reduce((a, t) => a + t.est, 0);
+
+document.getElementById("facts").innerHTML = [
+  [fa(12), "هفته"], [fa(SPRINTS.length), "اسپرینت"], [fa(allTasks.length), "تیکت"],
+  ["~" + fa(totalHours), "ساعت کار، حدود " + fa(Math.round(totalHours / 12)) + " ساعت در هفته"]
+].map(f => `<div class="fact"><b>${f[0]}</b><span>${f[1]}</span></div>`).join("");
+
+const li = a => a.map(x => `<li>${x}</li>`).join("");
+document.getElementById("sprints").innerHTML = SPRINTS.map(s => `
+<section class="sprint" id="s${s.n}">
+  <div class="sprint-head"><h2>اسپرینت ${fa(s.n)}: ${s.name}</h2><span class="when">${s.when}</span></div>
+  <p class="goal">${s.goal}</p>
+  <div class="tasks">${s.tasks.map(t => `
+    <div class="task${done[t.id] ? " done" : ""}" data-id="${t.id}">
+      <input type="checkbox" id="cb-${t.id}" aria-label="انجام شد: ${t.t}"${done[t.id] ? " checked" : ""}>
+      <details>
+        <summary><span class="tid">${t.id}</span><span class="ttl">${t.t}</span>
+          <span class="tag ${t.p === 0 ? "p0" : "p1"}">${t.p === 0 ? "الزامی" : "مهم"}</span>
+          <span class="tag est">${fa(t.est)} ساعت</span></summary>
+        <div class="body">
+          <div><h4>چرا</h4><p>${t.why}</p></div>
+          <div><h4>کارها</h4><ol>${li(t.steps)}</ol></div>
+          <div class="ac"><h4>معیار پذیرش</h4><ul>${li(t.ac)}</ul></div>
+          <div><h4>مفاهیمی که باید یاد بگیری</h4><div class="learn">${t.learn.map(l => `<span>${l}</span>`).join("")}</div></div>
+        </div>
+      </details>
+    </div>`).join("")}
+  </div>
+</section>`).join("");
+
+function refresh() {
+  const n = allTasks.filter(t => done[t.id]).length;
+  document.getElementById("ptext").textContent = `${fa(n)} از ${fa(allTasks.length)} تیکت`;
+  document.getElementById("fill").style.width = (100 * n / allTasks.length) + "%";
+  document.getElementById("chips").innerHTML = SPRINTS.map(s => {
+    const d = s.tasks.filter(t => done[t.id]).length;
+    return `<a href="#s${s.n}" class="${d === s.tasks.length ? "full" : ""}">اسپرینت ${fa(s.n)} · ${fa(d)}/${fa(s.tasks.length)}</a>`;
+  }).join("");
+}
+refresh();
+
+document.getElementById("sprints").addEventListener("change", e => {
+  const row = e.target.closest(".task");
+  if (!row || e.target.type !== "checkbox") return;
+  if (e.target.checked) done[row.dataset.id] = 1; else delete done[row.dataset.id];
+  row.classList.toggle("done", e.target.checked);
+  save(); refresh();
+});
+
+const btn = document.getElementById("toggleAll");
+btn.addEventListener("click", () => {
+  const open = btn.dataset.open !== "1";
+  document.querySelectorAll(".task details").forEach(d => d.open = open);
+  btn.dataset.open = open ? "1" : "0";
+  btn.textContent = open ? "بستن همه" : "باز کردن همه";
+});
+</script>
+</body>
+</html>

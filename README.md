@@ -1,0 +1,75 @@
+# نبض شهر (Nabz-e Shahr)
+
+پلتفرم داده‌ی لحظه‌ای و دسته‌ای برای سفرهای تاکسی اینترنتی، روی داده‌ی عمومی NYC TLC.
+شرح کامل پروژه و تیکت‌ها: [`docs/project-brief.html`](docs/project-brief.html)
+
+> این README موقت است. در تیکت NBZ-802 آن را به انگلیسی و کامل بازنویسی کن.
+
+## شروع کار
+
+```bash
+source .venv/bin/activate      # فعال کردن محیط پایتون
+cp .env.example .env           # و بعد مقدارها را عوض کن
+```
+
+## بالا آوردن سرویس‌ها
+
+همه‌ی دستورها از ریشه‌ی پروژه اجرا می‌شوند. چون فایل compose در `infra/` است، `--env-file .env` لازم است.
+
+```bash
+docker compose -f infra/docker-compose.yml --env-file .env up -d     # بالا آوردن
+docker compose -f infra/docker-compose.yml --env-file .env down      # پایین آوردن (داده می‌ماند)
+docker compose -f infra/docker-compose.yml --env-file .env down -v   # پایین آوردن و پاک کردن داده
+```
+
+| سرویس | آدرس | ورود |
+|---|---|---|
+| MinIO S3 API | http://localhost:9000 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` از `.env` |
+| کنسول MinIO | http://localhost:9001 (پورت: `MINIO_CONSOLE_PORT`) | همان |
+
+### MinIO (NBZ-101)
+
+- داده در volume به نام `minio-data` می‌ماند و با `down` و `up` پاک نمی‌شود.
+- سرویس `minio-init` با هر `up` یک‌بار اجرا می‌شود، bucketهای `landing` و `lake` را اگر نباشند می‌سازد و خارج می‌شود.
+- رمز root فقط موقع ساخته شدن volume اعمال می‌شود. اگر آن را در `.env` عوض کردی، یک‌بار `down -v` بزن.
+- ایمیج رسمی `minio/minio` و `minio/mc` از Docker Hub و quay.io حذف شده‌اند. به‌جای آن‌ها از `pgsty/minio` و `pgsty/mc` استفاده می‌شود که build جامعه از همان کد است.
+
+### گرفتن ایمیج‌ها از ایران
+
+Docker Hub موقع دانلود لایه‌ها `403 Forbidden` می‌دهد. یک‌بار mirror را تنظیم کن:
+
+```bash
+echo '{ "registry-mirrors": ["https://docker.arvancloud.ir"] }' | sudo tee /etc/docker/daemon.json
+sudo systemctl restart docker
+```
+
+بعد از آن `pull` عادی کار می‌کند:
+
+```bash
+docker compose -f infra/docker-compose.yml --env-file .env pull
+```
+
+mirrorهای جایگزین: `hub.hamdocker.ir`، `registry.docker.ir`، `docker.iranserver.com`.
+
+## نقشه‌ی پوشه‌ها
+
+| پوشه | محتوا | تیکت‌ها |
+|---|---|---|
+| `infra/` | فایل compose و تنظیمات هر سرویس (یک زیرپوشه برای هر سرویس) | NBZ-101 تا 104، 401، 501، 601، 602 |
+| `ingestion/` | دانلودگر فایل‌های TLC به landing | NBZ-201 |
+| `jobs/common/` | schema و تابع‌های تبدیل مشترک Spark | NBZ-202، 204 |
+| `jobs/batch/` | jobهای Bronze و Silver | NBZ-202، 301، 304 |
+| `jobs/streaming/` | jobهای Structured Streaming | NBZ-403 تا 406 |
+| `jobs/maintenance/` | compaction و پاک‌سازی snapshot | NBZ-503 |
+| `producer/` | بازپخش‌کننده‌ی رویداد و schemaهای Avro | NBZ-402 |
+| `dags/` | DAGهای Airflow | NBZ-501، 503 |
+| `dbt/` | مدل‌های Gold، تست‌ها، macroها | NBZ-302، 303، 304 |
+| `dq/` | انتظارها و checkpointهای Great Expectations | NBZ-502 |
+| `sql/warmup/` | ده کوئری تمرینی DuckDB | NBZ-002 |
+| `tests/unit/`، `tests/integration/` | تست‌های pytest | NBZ-204 |
+| `dashboards/` | export داشبوردهای Superset و Grafana | NBZ-601، 602 |
+| `docs/` | data contract، design doc، runbook، journal، بنچمارک | NBZ-003، 004، 603، 701 |
+| `notebooks/` | کاوش آزاد داده | NBZ-003 |
+| `scripts/` | اسکریپت‌های کمکی یک‌بارمصرف | |
+| `data/` | داده‌ی محلی؛ در git نمی‌رود | |
+| `.github/workflows/` | CI | NBZ-801 |
